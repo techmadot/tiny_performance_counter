@@ -32,7 +32,12 @@ namespace tiny_perf_counter
 {
   struct InitParams
   {
-    bool useGlobalCPUUtilization = true;
+    // パフォーマンスカウンタ情報の読み取り頻度. (単位はms)
+    uint32_t checkIntervalMilliSeconds = 100;
+
+    // CPU使用率情報について、プロセス単位がグローバル単位かを選択.
+    // true :システム全体の使用率となり、タスクマネージャーの値と合致.
+    bool useGlobalCPUUtilization = true;      
   };
   // 初期化処理.
   bool Initialize(const InitParams& initParams);
@@ -58,10 +63,16 @@ namespace tiny_perf_counter
   //  - useGlobalCPUUtilization = false の場合、プロセス単体での使用率.
   double GetCPUUtilization();
 
-
   // CPU コアごとの使用率を取得.
   //  - システム全体での使用率である点に注意.
   std::vector<double> GetCPUCoresUtilization();
+
+  // CPU使用率ピーク情報をリセット.
+  void ResetPeakCPU();
+
+  // CPU使用率ピーク情報を取得.
+  double GetPeakCPUUtilization();
+
 }
 
 #if defined(TINY_PERFORMANCE_COUNTER_IMPLEMENTATION)
@@ -120,6 +131,7 @@ namespace tiny_perf_counter
       bool Initialize(const InitParams& initParams)
       {
         m_useCpuUtilizationGlobal = initParams.useGlobalCPUUtilization;
+        m_intervalPeriod = std::chrono::milliseconds(initParams.checkIntervalMilliSeconds);
 
         m_pid = GetCurrentProcessId();
         m_selfPidString = std::format(L"pid_{}", m_pid);
@@ -190,7 +202,16 @@ namespace tiny_perf_counter
         std::unique_lock lock(m_mutex);
         return m_cpuCoresUsage;
       }
-
+      void ResetPeakCPU()
+      {
+        std::unique_lock lock(m_mutex);
+        m_cpuUsagePeak = 0.0f;
+      }
+      double GetPeakCPUUtilization()
+      {
+        std::unique_lock lock(m_mutex);
+        return m_cpuUsagePeak;
+      }
     private:
       std::thread m_workerThread;
       std::wstring m_selfPidString;
@@ -200,7 +221,7 @@ namespace tiny_perf_counter
       DWORD m_pid = 0xFFFFFFFFu;
       DWORD m_logicalProcessorCount = 0;
 
-      std::chrono::milliseconds m_intervalPeriod = 100ms;
+      std::chrono::milliseconds m_intervalPeriod;
       PDH_HQUERY m_pdhQuery;
       PDH_HCOUNTER m_hGpuDedicateMem, m_hGpuSharedMem;
       PDH_HCOUNTER m_hGpuUsage;
@@ -222,6 +243,7 @@ namespace tiny_perf_counter
       double m_cpuUsage = 0;
       double m_cpuUsageGlobal = 0;
       std::vector<double> m_cpuCoresUsage;
+      double m_cpuUsagePeak = 0;
       // ------------------
     private:
 
@@ -540,6 +562,14 @@ namespace tiny_perf_counter
             m_gpuEngineUtilization = gpuEngineUtilization;
             m_gpuMemory.dedicated = gpuDedicatedMem;
             m_gpuMemory.shared = gpuSharedMem;
+            if (m_useCpuUtilizationGlobal)
+            {
+              m_cpuUsagePeak = (std::max)(m_cpuUsageGlobal, m_cpuUsagePeak);
+            }
+            else
+            {
+              m_cpuUsagePeak = (std::max)(m_cpuUsage, m_cpuUsagePeak);
+            }
 
             m_cpuCoresUsage.resize(cpuCoresUsage.size());
             for (uint32_t i = 0; i < cpuCoresUsage.size(); ++i)
@@ -642,6 +672,21 @@ namespace tiny_perf_counter
     return std::vector<double>();
   }
 
+  void ResetPeakCPU()
+  {
+    if (impl::gPerformanceCounter)
+    {
+      impl::gPerformanceCounter->ResetPeakCPU();
+    }
+  }
+  double GetPeakCPUUtilization()
+  {
+    if (impl::gPerformanceCounter)
+    {
+      return impl::gPerformanceCounter->GetPeakCPUUtilization();
+    }
+    return 0;
+  }
 } // tiny_perf_counter
 #endif // TINY_PERFORMANCE_COUNTER_IMPLEMENTATION
 
