@@ -1,4 +1,4 @@
-#define TINY_PERFORMANCE_COUNTER_IMPLEMENTATION
+ï»¿#define TINY_PERFORMANCE_COUNTER_IMPLEMENTATION
 #include "tiny_performance_counter.h"
 
 #include <thread>
@@ -17,12 +17,12 @@ int main()
 {
   using namespace std;
 
-  // ‰Šú‰».
+  // åˆæœŸåŒ–.
   tiny_perf_counter::InitParams initParams{};
-  initParams.useGlobalCPUUtilization = true;  // ƒ^ƒXƒNƒ}ƒl[ƒWƒƒ[‚Å‚Ì CPU g—p—¦‚Æ‡‚¤Œ`®‚ÅÌæ‚·‚é.
+  initParams.useGlobalCPUUtilization = true;  // ã‚¿ã‚¹ã‚¯ãƒãƒãƒ¼ã‚¸ãƒ£ãƒ¼ã§ã® CPU ä½¿ç”¨ç‡ã¨åˆã†å½¢å¼ã§æ¡å–ã™ã‚‹.
   tiny_perf_counter::Initialize(initParams);
 
-  // ƒL[“ü—Í‚ğ‘Ò‚¿‚Â‚ÂA1•b‚¨‚«‚ÉƒJƒEƒ“ƒ^‚ğ•\¦‚·‚é.
+  // ã‚­ãƒ¼å…¥åŠ›ã‚’å¾…ã¡ã¤ã¤ã€1ç§’ãŠãã«ã‚«ã‚¦ãƒ³ã‚¿ã‚’è¡¨ç¤ºã™ã‚‹.
   cout << "Press any key to exit." << endl;
   auto collectThread = std::thread([]() { CheckInput(); });
   while (!gInterrupt)
@@ -45,7 +45,7 @@ int main()
   }
   collectThread.join();
 
-  // I—¹ˆ—.
+  // çµ‚äº†å‡¦ç†.
   tiny_perf_counter::Shutdown();
 
   return 0;
